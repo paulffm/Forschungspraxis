@@ -55,12 +55,13 @@ def plot_mesh(msh):
     plt.show()
 
     # Alternative plotting. Here the result is directly 2D.
-    # Triangulation(coords, triangles)
+    # Triangulation(coords, indices of triangles)
     triang = Triangulation(x, y, msh.elem_to_node)
     print(triang)
     fig = plt.figure()
     ax1 = fig.add_subplot(121)
     ax1.set_aspect('equal')
+    # plots triangle grid
     tpc = ax1.triplot(triang)
 
     # And here with z values
@@ -101,6 +102,7 @@ def plot_regions_of_mesh(msh, physical_groups):
     ax.triplot(triang_shell, color='blue', label='shell')
     plt.legend()
     for edge in edges_on_ground:
+        # in i zeichnet von line i von x zu y koordinate
         node_x = msh.node[msh.edge_to_node[edge, [0, 1]], 0]
         node_y = msh.node[msh.edge_to_node[edge, [0, 1]], 1]
         line, = ax.plot(node_x, node_y, color='red')
@@ -187,13 +189,27 @@ def main():
     J_0 = I / (np.pi * r_1 ** 2)  # [A/m] : current density in the wire
     mu_0 = 4 * np.pi * 1e-7  # [H/m] : permeability of vacuum (and inside of wire)
     mu_shell = 5 * mu_0
-    eps_0 = 8.8541878128* 1e-12
+    eps_0 = 8.8541878128 * 1e-12
+
+    # plot of Analytic Solution:
+    '''r_list = np.linspace(0, r_2, 100)
+    fig, axs = plt.subplots(3, 1)
+    axs[0].plot(r_list, analytic_sol.B_phi(r_list))
+    axs[0].set_title("B")
+    axs[0].set(xlabel='r', ylabel='B')
+    axs[1].plot(r_list, analytic_sol.H_phi(r_list))
+    axs[1].set_title("H")
+    axs[1].set(xlabel='r', ylabel='H')
+    axs[2].plot(r_list, analytic_sol.A_z(r_list))
+    axs[2].set_title("A")
+    axs[2].set(xlabel='r', ylabel='A')
+    plt.show()'''
+
 
     ##### Task2: Construction of a finite-element model with Gmsh #####
 
     msh = Mesh.create()
-    # node_tags arr, node_data arr(koord), element types, element tags, arr 29-200, node_tags_elements, arr länge 516 und bis 101
-    #print(msh.num_elements, msh.num_node): 172, 101 weniger elements?
+    #print(msh.num_elements, msh.num_node): 172, 101 weniger elements
     pg = gmsh.model.getPhysicalGroups()
     # (dim, tag)
     # pg [(1, 3), (2, 1), (2, 2)]
@@ -208,10 +224,8 @@ def main():
     for group in pg:
         # physical_groups unterscheidung durch tags: zugriff: physical_groups[3]
         # getphysicalname(dim, tag) -> name as string 'GND'
-        # getNodesforPhysicalGroup(dim, tag) -> node_tags, node_coord hier nur tags wegen [0];  # -1 weil man in
-        # python ab 0 zählt?
+        # getNodesforPhysicalGroup(dim, tag) -> node_tags, node_coord hier nur node_tags wegen [0];
 
-        # so war es vorgegeben: für entity in physical group
         physical_groups[group[1]] = (group[0], gmsh.model.getPhysicalName(group[0], group[1]),
                                      gmsh.model.mesh.getNodesForPhysicalGroup(group[0], group[1])[0] - 1)
 
@@ -226,16 +240,16 @@ def main():
 
     # plot msh: directly 2D plot,colorbar just for a z Value
     plot_mesh(msh)
+
     # plot regions of mesh
     plot_regions_of_mesh(msh, physical_groups)
+
     # indices for all entities by physical group
     elem_in_shell = entity_in_physical_group(physical_groups, msh.elem_to_node, 'SHELL')
     elem_in_wire = entity_in_physical_group(physical_groups, msh.elem_to_node, 'WIRE')
-    print('elem in wir', elem_in_wire)
 
     # Compute element-wise reluctivity: shell and inside of wire
-    # Permeabilität=Durchlässigkeit Magnetfeld
-    # Reluktanz=magn. Widerstand
+    # Permeabilität = Durchlässigkeit Magnetfeld; Reluktanz=magn. Widerstand
     # magn. Fluss folgt dem Weg mit geringstem magn. Widerstand
     reluctivity_in_elements = 1 / mu_0 * np.ones(msh.num_elements)  # [m/H] : reluctivities, one per element
     reluctivity_in_elements[elem_in_shell] = 1 / mu_shell  # [m/H] : reluctivities for the iron shell
@@ -245,12 +259,13 @@ def main():
 
     # Task 4: setup the FE shape functions and assemble the stiffness matrix and load vector.
     # construct shape_function
-    # elem_to_node gives me indices of nodes for each element; .node gives me coord of specific indices of node
+
     x1 = msh.node[msh.elem_to_node, 0]  # x coordinates of the nodes for each element
     y1 = msh.node[msh.elem_to_node, 1]  # y coordinates of the nodes for each element
-    print(x1.shape, x1[:10]) # 172, 3
-    # roll rotiert x, y koordinaten um 1, 2 Stellen: wieso?
-    # um für jedes Element (Dreieck), die 3 a,b und c zu berechnen:
+    print(x1.shape, x1[:10]) # 172, 3->jedes Dreieck 3 Punkte mit 3 x Koordinaten
+    # roll rotiert x, y koordinaten um 1, 2 Stellen:
+
+    # um die 3 Nodal functions in jedem Dreieck zu berechnen: (immer zwischen 2 Punkten)
     # zwischen P1, P2; P1, P3 und P2, P3
     x2 = np.roll(x1, -1, axis=1)
     y2 = np.roll(y1, -1, axis=1)
@@ -258,18 +273,16 @@ def main():
     y3 = np.roll(y1, -2, axis=1)
     print('x3', x3[:10])
 
-    # Definition of coefficients according to HDG's lecture. Alternative approaches exist
+    # Definition of coefficients according to HDG:
     # and are equivalent: all (num_elem x 3): je nach dem, was als Punkt 1, 2,3 anderes a, b, c
     a = x2 * y3 - x3 * y2
     b = y2 - y3
     c = x3 - x2
 
-
     # mean weil für alle gleich ist: also aus 172 x 3 -> 172 x 1
     element_area = np.mean(((x2 * y3 - x3 * y2) + (y2 - y3) * x1 + (x3 - x2) * y1) / 2, 1)
 
-    # Instantiation
-    # saved in this wise
+    # Instantiation of Shape function: gives only object
     shape_function = ShapeFunction_N(depth, element_area, a, b, c)
 
     # Assign Knu for global indices: exactly taken from supporting remarks
@@ -277,28 +290,37 @@ def main():
     index_columns = np.zeros((9 * msh.num_elements), dtype='int')
     elementwise_entries = np.zeros((9 * msh.num_elements))
 
-    # looping over elements
+    # loop over elements
     for k in range(msh.num_elements):
-        global_indices = msh.elem_to_node[k, :]  # get global indices for nodes for element k: (3, ) wie zeile
+
+        # get global indices for nodes for element k: (3, ): Zie zeile
+        global_indices = msh.elem_to_node[k, :]
+
         # (3, 3) -> zeile dreimal untereinander
         triple_global_indices = np.array([global_indices, global_indices, global_indices])
+
         # np.reshape(triple_global_indices, (9)) schreibt in eine Zeile: (9, )
-        # schreibt nach und nach alle 9 indices nebeneinander
-        index_rows[9 * k:9 * k + 9] = np.reshape(triple_global_indices, (9))  # update global row vector
-        # schreibt indices immer 3 mal nebeinander: index_row [44 58 49 44 58 49 44 58 49 56...],
-        # dann col: [44 44 44 58 58 58 49 49 49 56 56 56
-        index_columns[9 * k:9 * k + 9] = np.reshape(triple_global_indices.T, (9))  # update global column vector
-        # global elementwise entry vector
-        # Knu: ((b.T * b + c.T * c ) / (4 * area * l_z)) * reluctivity -> produziert 3x3 output
-        print(Knu_for_elem(k, shape_function, reluctivity_in_elements))
+        # schreibt nach und nach alle 9 indices nebeneinander und zwar wie folgt:
+        # immer 3 mal nebeinander: index_row [44 58 49 44 58 49 44 58 49 ...],
+        index_rows[9 * k:9 * k + 9] = np.reshape(triple_global_indices, (9))
+
+        # dann col: [44 44 44 58 58 58 49 49 49  ..]
+        index_columns[9 * k:9 * k + 9] = np.reshape(triple_global_indices.T, (9))
+
+        # lokales Knu: ((b.T * b + c.T * c ) / (4 * area * l_z)) * reluctivity -> produziert 3x3 output
+        #print(Knu_for_elem(k, shape_function, reluctivity_in_elements))
+
+        # aus 3x3 wird 1x9 und das in elementwise_entries geschrieben
         elementwise_entries[9 * k:9 * k + 9] = np.reshape(Knu_for_elem(k, shape_function, reluctivity_in_elements),(9))
+
     # Assembly of Knu
     index_rows = index_rows.T
     index_columns = index_columns.tolist()
     elementwise_entries = elementwise_entries.tolist()
+
     # Build Knu Matrix: # [1/H] : circuit-reluctance matrix (num_nodes x num_nodes array but sparse)
     Knu = csr_matrix((elementwise_entries, (index_rows, index_columns)))
-    print('knu', Knu, Knu.shape)
+    print('Knu shape', Knu, Knu.shape)
 
     # Print structure of matrix: dünn besetzt
     plt.spy(Knu, markersize=1)
@@ -308,25 +330,23 @@ def main():
 
     # Set element-wise current density in wire region
     current_density_in_elems = np.zeros(msh.num_elements)  # [A/m^2]: current density
-    # [A/m^2]: current density: I/A von jedem elem
+
+    # [A/m^2]: current density: I/A von jedem element: Nur in Wire sonst ja isoliert
     current_density_in_elems[elem_in_wire] = I / np.sum(shape_function.element_area[elem_in_wire])
+
     # localized current density, grid current [A]: (172,)
+    print('elem_are', shape_function.element_area)
     grid_currents = current_density_in_elems * shape_function.element_area / 3
+
     # inflate for nodal accumulation: (172, 3): grid_currents: 3 mal nebeneinander kopiert mit np.tile
     grid_currents = np.tile(grid_currents, (3, 1)).transpose()
 
-    # values for current contribution of each element on the nodes.
+    # vector with values for current contribution of each element on the nodes.
     values = np.zeros(msh.num_node)
-    # elem_to_node: (num_elements, 3)
-    # example: first entry in msh.elem_to_node 44, in grid_currents wird entsprechend current ausgewählt für node 44
-    # idx_node = 44 values[44] = grid_curren[0,0] -> jedes mal idx_node = 44 kommt, wird grid_current addiert um Anteil
-    # von node 44 am Gesamtstrom zu berechnen
-    # np.tile wurde gemacht, damit doppelte iteration auch in grid_current möglich und die richtige Stromstärke auswählt
 
-    # wählt erst element aus (nach reihenfolge 0 bis 172):
-    # dann indize k von knoten i, dieser indize wird gespeichert in idx_node:
-    # dann wird strom von element in zeile von knoten gespeichert und das für alle knoten die zu diesem element gehören
-    # nach iterationen: stehen in jeder Zeile i: Stromstärken von allen elementen addiert, zu denen Knoten i gehört
+    # Iteration durch jedes Element i: und wenn Node k an Ecke von Element i:
+    # Addiere Beitrag Ii,k zu Node k in Vector values:
+    # Am Ende: Für jeden Node stehen dort die addierten Strombeiträge von jedem Element, in welchem sich Node k befindet
     for k in range(0, 3):
         for i in range(0, msh.num_elements - 1):
             idx_node = msh.elem_to_node[i, k]
@@ -336,21 +356,28 @@ def main():
     j_grid = csr_matrix((values, (np.arange(msh.num_node), np.zeros(msh.num_node))), shape=(msh.num_node, 1))
     print('j', j_grid, j_grid.shape)
 
-    # plot current density in elements
-    #plot_current(msh, current_density_in_elems)
 
-    # print('unit of Knu: [1/H] : circuit-reluctance matrix')
-    # print('unit of load vector: [A/m^2]: current density')
+
+
+    # plot current density in elements
+    plot_current(msh, current_density_in_elems)
+
+    print('unit of Knu: [1/H] : circuit-reluctance matrix')
+    print('unit of load vector: [A/m^2]: current density')
 
     ##### Task 5: First validation is the check of the magnetic energy #####
 
     x = np.array(msh.node[:, 0], ndmin=1).T
     y = np.array(msh.node[:, 1], ndmin=1).T
+
     # [m]    : radial coordinate
     r = np.sqrt(x ** 2 + y ** 2)
+
     # [Tm]   : analytic solution for the magnetic vector potential projected onto the mesh
     A_analytic = depth * analytic_sol.A_z(r)
+
     # [J]    : magnetic energy (analytic solution, numerical circuit-reluctance matrix)
+    # Gesamtenergie eines magnetostatischen Feldes: W = 0.5 Integral (A *J) dV= 0.5 * Integral (A * K * A) dV (KA=J)
     W_magn_test = 1 / 2 * A_analytic @ Knu @ A_analytic
     W_magn_analytic = analytic_sol.W_magn()
 
@@ -376,7 +403,7 @@ def main():
 
     j_grid_dof = j_grid[index_dof]
     rhs = j_grid_dof
-    # Solve the system
+    # Solve the system: Ka = j spsolver: Ax=b
     a_shrink = spsolve(Knu_shrink, rhs)
 
     # Inflate
@@ -384,6 +411,26 @@ def main():
     a[index_dof] = a_shrink  # filled to (101,1)
     a[index_constraint] = value_constraint
     a = a.reshape(len(a))  # (101) for every node
+
+
+    # idx wire
+    idx_wire = physical_groups[1]  # [@]: edge indices of the shell boundary on GND
+    idx_wire = idx_wire[2]
+    X_distr = np.zeros((msh.num_node, 1))
+    X_distr[idx_wire] = 1
+
+    # wie L?
+    X_distr_shrink = X_distr[index_dof]
+    x_hat = np.zeros((msh.num_node, 1))
+    x_hat_shrink = spsolve(Knu_shrink, index_dof)
+    x_hat[index_dof] = x_hat_shrink.reshape(-1, 1)
+    x_hat[index_constraint] = value_constraint.reshape(-1, 1)
+    x_hat = a.reshape(len(x_hat))
+    print(X_distr.T * x_hat, analytic_sol.Inductance())
+    L_hat = X_distr.T @ Knu @ X_distr
+    print(L_hat)
+
+
 
     # plot sol: on ground = 0
     plot_sol(msh, a)
@@ -402,12 +449,14 @@ def main():
     print(b_field_abs, b_field_abs.shape)
 
     # plot b_field:
-    # man sieht: ist stärker, wo Reluktanz geringer ist: in shell stärker 1 / 5 * mu
+    # man sieht: ist stärker, wo Reluktanz geringer ist -> in Shell ist B folglich größer
     plot_bfield(msh, b_field_abs)
 
 
     # Validity check
     W_magn_fe = 1 / 2 * a @ Knu @ a  # [J]    : magnetic energy
+
+    # W =
     W_magn_fe2 = np.sum(1 / 2 * reluctivity_in_elements * b_field_abs ** 2
                         * shape_function.element_area * shape_function.depth)  # [J]     : magnetic energy (integrated)
     print('Validity Check:')
@@ -420,47 +469,6 @@ def main():
     # conv_order = (np.log(rel_error1) -  np.log(rel_error2)) / np.log(size1) - np.log(size2))
 
     ##### Task 8, 9: relativ error of energy and convergence study in pyrit script#####
-
-
-    ##### Task 10: TLM #####
-    # constant
-    sigma = 57e6
-
-    # inductivity per length
-    L = analytic_sol.Inductance() / depth
-    print('L', L)
-
-    # conductivity per length
-    C = (2 * np.pi * eps_0) / np.log(r_2 / r_1)
-    print('C')
-
-    # resistance per length
-    R = 1 / (sigma * np.pi * r_1 ** 2)
-
-    # impedance matrix
-    Z = []
-    Y = []
-    w = []
-    beta = []
-    Z_char = []
-    f = np.arange(1, 10e3, 1)
-    for f_i in range(f):
-        w_i = 2 * np.pi * f_i
-        w.append(w_i)
-        Z.append(R + complex(0, w * L))
-        Y.append((1 / R) + complex(0, w * C))
-        beta.append(Z * Y)
-        Z_char.append(np.sqrt(Z / Y))
-
-    print('Z', Z)
-
-
-
-
-
-    # Z char
-    Z_char = 6
-
 
     # to do: how to calculate B, Knu
 if __name__ == '__main__':

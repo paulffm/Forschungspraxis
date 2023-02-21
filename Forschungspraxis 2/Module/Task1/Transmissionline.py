@@ -7,7 +7,7 @@ import analytic_sol
 
 def A(L, C, R, f, depth):
     """The propagation matrix A."""
-    w = 2 * np.pi* f
+    w = 2 * np.pi * f
     Z_i = (R + (w * L) * 1j)
     Y_i = (w * C) * 1j
     beta = np.sqrt(Z_i * Y_i)
@@ -45,7 +45,7 @@ def main():
     eps_0 = 8.8541878128 * 1e-12
 
     ##### Task 10: TLM #####
-    sigma = 57e6
+    sigma = 57.7e6
 
     # inductivity per length
     L = analytic_sol.Inductance() / depth
@@ -65,14 +65,13 @@ def main():
     beta = []
     Z_char = []
     c_0 = 1 / np.sqrt(mu_0 * eps_0)
-    v_phase = 1 / (c_0 * np.sqrt(C * C))
+    v_phase = 1 / (np.sqrt(L * C)) #c_0
     print('v_phase', v_phase)
 
     wave_len = []
     #f = np.arange(1, 10e3 + 1, 1)
     f = np.logspace(0, 5, 100)
 
-    print(f)
     for i in range(len(f)):
         w_i = 2 * np.pi * f[i]
         w.append(w_i)
@@ -88,6 +87,7 @@ def main():
 
     Z_abs = np.abs(Z_char)
     Z_ang = np.angle(Z_char)
+    print(Z_ang)
 
 
 
@@ -101,7 +101,7 @@ def main():
     plt.xlabel('frequency')
     plt.ylabel('abs(Z)')
     plt.title('Bode plot of angle(Z_char)')
-    plt.loglog(f, Z_ang)
+    plt.loglog(f, np.sign(Z_ang)*(np.log10(np.abs(Z_ang)+1)))
     plt.show()
 
     plt.xlabel('frequency')

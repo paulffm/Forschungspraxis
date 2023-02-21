@@ -3,9 +3,6 @@ from dataclasses import dataclass
 import gmsh
 import sys
 
-
-
-# Handling of gmsh data in Python context. (Provide to students)
 # This implementation is well suited for small meshes.
 @dataclass
 class Mesh:
@@ -74,6 +71,7 @@ class Mesh:
     @property
     def edge_to_node(self):
         # Associate edges and their respective nodes.
+        # [1 0 ], [1 0], [2 3] unique:[1 0 ] [2 3]
         return np.unique(np.sort(self.all_edges), axis=0)
 
     # Import Gmsh File

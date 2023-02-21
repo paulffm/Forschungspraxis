@@ -1,3 +1,4 @@
+
 import numpy as np
 
 r_1 = 2e-3                # [m]: inner radius (wire)
@@ -93,9 +94,3 @@ def Inductance():
     #[H]   : inductance (analytical)
     W_magn_analytic = W_magn()
     return 2 * W_magn_analytic / I ** 2
-
-def Inductance_shell():
-    return (mu_shell * depth / (2 * np.pi)) * np.log(r_2 / r_1)
-
-def Inductance_wire():
-    return mu_0 * depth / (8 * np.pi)
