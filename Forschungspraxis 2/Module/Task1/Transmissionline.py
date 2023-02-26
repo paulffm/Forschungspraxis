@@ -32,6 +32,7 @@ def B(L, C, R, f, depth):
         [1, -np.cosh(bl)]
     ]) * Y / np.sinh(bl)
 
+# Fragen: Plot für Phase korrekt? Interpretation: wenn shifting von -
 def main():
     # constant
     r_1 = 2e-3  # [m]: inner radius (wire)
@@ -54,6 +55,8 @@ def main():
     # conductivity per length
     C = (2 * np.pi * eps_0) / np.log(r_2 / r_1)
     print('C', C)
+    # wrong
+    # print('C_num', eps_0 * mu_shell / L)
 
     # resistance per length
     R = 1 / (sigma * np.pi * r_1 ** 2)
@@ -65,8 +68,8 @@ def main():
     beta = []
     Z_char = []
     c_0 = 1 / np.sqrt(mu_0 * eps_0)
-    v_phase = 1 / (np.sqrt(L * C)) #c_0
-    print('v_phase', v_phase)
+    v_phase = c_0 #1 / (np.sqrt(L * C))
+    print(v_phase, c_0)
 
     wave_len = []
     #f = np.arange(1, 10e3 + 1, 1)
@@ -86,28 +89,38 @@ def main():
         wave_len.append(v_phase / f[i])
 
     Z_abs = np.abs(Z_char)
-    Z_ang = np.angle(Z_char)
-    print(Z_ang)
-
+    Z_ang = np.angle(Z_char, deg=True)
 
 
     plt.xlabel('frequency')
     plt.ylabel('abs(Z)')
-    plt.title('Bode plot of abs(Z_char)')
+    plt.title('Bode plot of abs(Z_char) in loglog')
     plt.loglog(f, Z_abs)
     plt.show()
 
 
     plt.xlabel('frequency')
-    plt.ylabel('abs(Z)')
-    plt.title('Bode plot of angle(Z_char)')
-    plt.loglog(f, np.sign(Z_ang)*(np.log10(np.abs(Z_ang)+1)))
+    plt.ylabel('angle(Z) in Degrees')
+    plt.title('Plot of angle(Z_char) in semilog')
+    plt.plot(f, Z_ang)
+    plt.xscale('log')
     plt.show()
 
     plt.xlabel('frequency')
     plt.ylabel('wave length')
-    plt.title('Bode plot of wave length')
-    plt.loglog(f, wave_len)
+    plt.title('Plot of wave length in semilog')
+    plt.plot(f, wave_len)
+    plt.xscale('log')
+    plt.show()
+    print(wave_len)
+
+    plt.xlabel('frequency')
+    plt.ylabel('v_phase')
+    plt.title('plot of v_phase in semilog')
+    plt.plot(f, wave_len * f)
+    plt.xscale('log')
+    plt.xlabel('frequency')
+    plt.ylabel('v_phase')
     plt.show()
 
     # propagation and admittance matrix for f_3 = 1kHz
@@ -116,11 +129,6 @@ def main():
     print('propagation matrix', prop_mat)
     adm_mat = B(L, C, R, f_3, depth)
     print('Admittance matrix', adm_mat)
-
-
-
-
-
 
 if __name__ == '__main__':
     main()

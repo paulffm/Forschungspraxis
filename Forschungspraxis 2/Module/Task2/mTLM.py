@@ -52,8 +52,12 @@ def A_m(Zm_ch: np.ndarray, bm: np.ndarray, l: float) -> np.ndarray:
     :param l: Length of the cable.
     """
     ak_m = [Ak_m(Zkm, bkm, l) for Zkm, bkm in zip(Zm_ch, bm)]
+
     a_m = sla.block_diag(ak_m[0], ak_m[1], ak_m[2])
+
+    # umsortieren sodass u1, u2, u3, i1, i2, i3 in dieser Reihenfolge steht
     idx = [0, 2, 4, 1, 3, 5]
+
     return a_m[idx, :][:, idx]
 
 

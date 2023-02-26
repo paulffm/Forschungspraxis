@@ -234,7 +234,7 @@ a_analytic = wire_problem.a_analytic(np.linalg.norm(mesh.node, axis=1))  #: [Tm]
 
 # Magnetic energy with analytic vector potential and numerical curlcurl-matrix
 energy_test = wire_problem.depth ** 2 * 1 / 2 * a_analytic @ curlcurl_matrix @ a_analytic  #: [J]
-
+print('L', 2 * solution.energy / wire_problem.current ** 2, 2 * wire_problem.analytic_energy / wire_problem.current ** 2)
 # Output important validation QoIs
 print('Verification Check:')
 print(f'Magnetic energy (analytic solution)                 : {wire_problem.analytic_energy}J')
@@ -270,10 +270,10 @@ if show_plot:
     end_point = [wire_problem.r_2, 0.]  # x,y
 
     fig, ax = plot_field_on_line(mesh, start_point, end_point, b_abs, lower_bound=0, upper_bound=end_point[0],
-                                 smoothing=True, regions=problem.regions, marker='o', label='Without smoothing')
+                                 smoothing=True, regions=problem.regions, marker='o', label='With smoothing')
     fig, ax = plot_field_on_line(mesh, start_point, end_point, b_abs, lower_bound=0, upper_bound=end_point[0],
                                  smoothing=False, regions=problem.regions, marker='o', fig=fig, ax=ax,
-                                 label='With smoothing')
+                                 label='Without smoothing')
     ax.legend()
     ax.set_title('Absolute magnetic flux density over the radius')
     ax.set_xlabel('Radius in m')
