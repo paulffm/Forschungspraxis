@@ -224,9 +224,6 @@ def main():
     index_rows = index_rows.T
     index_columns = index_columns.tolist()
     elementwise_entries = elementwise_entries.tolist()
-    print(index_rows[:10])
-    print(index_columns)
-    print(elementwise_entries)
 
     # Build Knu Matrix: # [1/H] : circuit-reluctance matrix (num_nodes x num_nodes array but sparse)
     Knu = csr_matrix((elementwise_entries, (index_rows, index_columns)))
@@ -342,9 +339,10 @@ def main():
     x_hat[idx_bc] = value_bc.reshape(-1, 1)
     x_hat = np.asarray(x_hat).reshape(-1, 1)
     print(x_grid.shape, x_hat.shape)
-    print('Lana', analytic_sol.Inductance())
+
     L_fe = x_grid.T @ x_hat
-    print('L_fe', L_fe, L_fe.shape, x_grid.T @ (a / I))
+    print('Analytical L', analytic_sol.Inductance())
+    print('FE L', L_fe, L_fe.shape, x_grid.T @ (a / I))
 
 
 

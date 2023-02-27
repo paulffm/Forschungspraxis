@@ -160,7 +160,7 @@ class PowerCable:
                                              boundary_conditions, excitations)'''
 
 
-        return prb_magn
+        return prb_magn, shape_function
 
 
 def main():
@@ -178,7 +178,9 @@ def main():
     #
     # Vergleich mit machine slot: Durchgehen, ob richtig gemacht in Power_Cable?
     power_cable = PowerCable()
-    problem = power_cable.create_problem(mesh_size_factor=0.2, show_gui=False)
+    problem, shape_function = power_cable.create_problem(mesh_size_factor=0.2, show_gui=False)
+    load = shape_function.load_vector(problem.regions, problem.excitations)
+    X = load / power_cable.current
 
     # ValueError: Matrix A is singular, because it contains empty row(s)
     solution = problem.solve()
@@ -189,6 +191,7 @@ def main():
     print('Energy Density', solution.energy_density)
     print('Energy', solution.energy)
     print('Inductivity', 2 * solution.energy / power_cable.current ** 2)
+    print('Induct 2', (X.T @ solution.vector_potential / power_cable.current))
     if show_plot:
         solution.plot_energy_density()
         solution.plot_vector_potential()

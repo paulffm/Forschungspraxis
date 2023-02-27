@@ -180,9 +180,15 @@ def main():
     a_shrink, _ = type(problem).solve_linear_system(matrix_shrink.tocsr(), rhs_shrink.tocsr())
     vector_potential = shape_function.inflate(a_shrink, problem, support_data)
 
-    # wrong
-    fed = load / power_cable.current
-    print(fed.T @ np.linalg.inv(curlcurl.toarray()) @ fed)
+    # L:
+    X = shape_function.load_vector(problem.regions, problem.excitations)
+    X = X /  power_cable.current
+    matrix_x_shrink, rhs_x_shrink, _, _, support_x_data = shape_function.shrink(curlcurl, X, problem, 1)
+    x_hat_shrink, _ = type(problem).solve_linear_system(matrix_x_shrink.tocsr(), rhs_x_shrink.tocsr())
+    vector_x_potential = shape_function.inflate(x_hat_shrink, problem, support_x_data)
+
+    print('L', X.T @ vector_x_potential)
+    print('L one simulation', X.T @ vector_potential / power_cable.current)
 
 
 
