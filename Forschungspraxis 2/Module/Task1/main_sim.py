@@ -1,13 +1,13 @@
 import gmsh
 from matplotlib import pyplot as plt
 from Meshsim import Mesh
-from matplotlib.tri import Triangulation
 from shape_function import ShapeFunction_N
 import analytic_sol
 from scipy.sparse.linalg import spsolve
 import numpy as np
 import scipy.sparse.linalg as las
 from scipy.sparse import csr_matrix, csr_array, spmatrix
+import plot_properties
 
 
 
@@ -70,162 +70,6 @@ def entity_in_physical_group(physical_group_data: dict, entity2node: np.ndarray,
             out[k] = k
 
     return out[out != -1]
-
-
-def plot_mesh(msh):
-    '''
-    :param msh:
-    :return:
-    '''
-    # %% Plotting
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.view_init(azim=0, elev=90)
-
-    x = np.array(msh.node[:, 0], ndmin=1).T
-    y = np.array(msh.node[:, 1], ndmin=1).T
-    z = np.zeros_like(x)
-    ax.plot_trisurf(x, y, z)
-    plt.title('3D Projection')
-    plt.show()
-
-    # Alternative plotting. Here the result is directly 2D.
-    # Triangulation(coords, indices of triangles)
-    triang = Triangulation(x, y, msh.elem_to_node)
-    fig = plt.figure()
-    plt.title('2D')
-    plt.xlabel('x')
-    plt.ylabel('y')
-    plt.triplot(triang)
-    #ax1 = fig.add_subplot(121)
-    #ax1.set_aspect('equal')
-    # plots triangle grid
-    #tpc = ax1.triplot(triang)
-
-    '''# And here with z values
-    z = (np.cos(x) * np.cos(3 * y)).flatten()
-    ax2 = fig.add_subplot(122)
-    ax2.set_aspect('equal')
-    tpc = ax2.tripcolor(triang, z, shading='flat')
-    fig.colorbar(tpc)
-    plt.title('directly 2D')'''
-    plt.show()
-
-def plot_regions_of_mesh(msh, physical_groups):
-    '''
-    :param msh:
-    :param physical_groups:
-    :return:
-    '''
-    x = np.array(msh.node[:, 0], ndmin=1).T
-    y = np.array(msh.node[:, 1], ndmin=1).T
-    z = np.zeros_like(x)
-
-
-    ## Visualize the regions of the model
-    # Indices of elements in shell and wire
-    elem_in_shell = entity_in_physical_group(physical_groups, msh.elem_to_node, 'SHELL')
-    elem_in_wire = entity_in_physical_group(physical_groups, msh.elem_to_node, 'WIRE')
-
-    # Indices of edges on ground
-    edges_on_ground = entity_in_physical_group(physical_groups, msh.edge_to_node, 'GND')
-    triang_shell = Triangulation(x, y, msh.elem_to_node[elem_in_shell])
-    triang_wire = Triangulation(x, y, msh.elem_to_node[elem_in_wire])
-
-    # Plot shell, wire and edges on ground potential
-    fig, ax = plt.subplots()
-    ax.set_aspect('equal')
-    ax.triplot(triang_wire, color='orange', label='wire')
-    ax.triplot(triang_shell, color='blue', label='shell')
-    plt.legend()
-    for edge in edges_on_ground:
-        # in i zeichnet von line i von x zu y koordinate
-        node_x = msh.node[msh.edge_to_node[edge, [0, 1]], 0]
-        node_y = msh.node[msh.edge_to_node[edge, [0, 1]], 1]
-        line, = ax.plot(node_x, node_y, color='red')
-    line.set_label('ground')
-    plt.title('Regions plot')
-    plt.legend()
-    plt.show()
-
-def plot_reluctivity(msh, reluctivity_in_elements):
-    '''
-    :param msh:
-    :param reluctivity_in_elements:
-    :return:
-    '''
-
-    x = np.array(msh.node[:, 0], ndmin=1).T
-    y = np.array(msh.node[:, 1], ndmin=1).T
-    triang = Triangulation(x, y, msh.elem_to_node)
-
-    # Plotting
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    tpc = ax.tripcolor(triang, facecolors=reluctivity_in_elements)
-    fig.colorbar(tpc)
-    ax.triplot(triang, color='black', lw=0.1)
-    ax.set_aspect('equal', 'box')
-    plt.title('Reluctivity')
-    plt.show()
-
-
-def plot_current(msh, current_density_in_elems):
-    '''
-    :param msh:
-    :param current_density_in_elems:
-    :return:
-    '''
-    x = np.array(msh.node[:, 0], ndmin=1).T
-    y = np.array(msh.node[:, 1], ndmin=1).T
-    triang = Triangulation(x, y, msh.elem_to_node)
-
-    # Plotting
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    tpc = ax.tripcolor(triang, facecolors=current_density_in_elems)
-    fig.colorbar(tpc)
-    ax.triplot(triang, color='black', lw=0.1)
-    ax.set_aspect('equal', 'box')
-    plt.title('current density')
-    plt.show()
-
-def plot_sol(msh, a):
-    '''
-    :param msh:
-    :param a:
-    :return:
-    '''
-    x = np.array(msh.node[:, 0], ndmin=1).T
-    y = np.array(msh.node[:, 1], ndmin=1).T
-    triang = Triangulation(x, y, msh.elem_to_node)
-    # Visualization
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.set_aspect('equal', 'box')
-    surf = ax.tripcolor(triang, a, cmap='viridis')  # cmap=plt.cm.CMRmap)
-    fig.colorbar(surf, shrink=0.5, aspect=5)
-    plt.title('solution for a')
-    plt.show()
-
-def plot_bfield(msh, b_field_abs):
-    '''
-    :param msh:
-    :param b_field_abs:
-    :return:
-    '''
-    x = np.array(msh.node[:, 0], ndmin=1).T
-    y = np.array(msh.node[:, 1], ndmin=1).T
-    triang = Triangulation(x, y, msh.elem_to_node)
-    # Plotting
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    tpc = ax.tripcolor(triang, facecolors=b_field_abs)
-    fig.colorbar(tpc)
-    ax.triplot(triang, color='black', lw=0.1)
-    ax.set_aspect('equal', 'box')
-    plt.title('magnetic flux density')
-    plt.show()
 
 def Knu_for_elem(k, shape_function, reluctivity_in_elements):
     '''
@@ -306,10 +150,10 @@ def main():
 
     # plot msh: directly 2D plot,colorbar just for a z Value
     print(msh.num_elements)
-    plot_mesh(msh)
+    plot_properties.plot_mesh(msh)
 
     # plot regions of mesh
-    plot_regions_of_mesh(msh, physical_groups)
+    plot_properties.plot_regions_of_mesh(msh, physical_groups)
 
     # indices for all entities by physical group
     elem_in_shell = entity_in_physical_group(physical_groups, msh.elem_to_node, 'SHELL')
@@ -322,7 +166,7 @@ def main():
     reluctivity_in_elem[elem_in_shell] = 1 / mu_shell  # [m/H] : reluctivities for the iron shell
 
     # plot reluctivity
-    plot_reluctivity(msh, reluctivity_in_elem)
+    plot_properties.plot_reluctivity(msh, reluctivity_in_elem)
 
     # Task 4: setup the FE shape functions and assemble the stiffness matrix and load vector.
     # construct shape_function
@@ -435,7 +279,7 @@ def main():
     print('x', x_grid, x_grid * I == j_grid)
 
     # plot current density in elements
-    plot_current(msh, j_in_elems)
+    plot_properties.plot_current(msh, j_in_elems)
 
     print('unit of Knu: [1/H] : circuit-reluctance matrix')
     print('unit of load vector: [A/m^2]: current density')
@@ -489,28 +333,25 @@ def main():
     a = a.reshape(len(a))  # (101) for every node
 
     # example calculation L
-    # idx wire
-    idx_wire = physical_groups[1]  # [@]: edge indices of the shell boundary on GND
-    idx_wire = idx_wire[2]
-    X_distr = np.zeros((msh.num_node, 1))
-    X_distr[idx_wire] = 1
 
     # wie L?
-    X_distr_shrink = X_distr[idx_dof]
+    x_grid_shrink = x_grid[idx_dof]
     x_hat = np.zeros((msh.num_node, 1))
-    x_hat_shrink = spsolve(Knu_red, idx_dof)
+    x_hat_shrink = spsolve(Knu_red, x_grid_shrink)
     x_hat[idx_dof] = x_hat_shrink.reshape(-1, 1)
     x_hat[idx_bc] = value_bc.reshape(-1, 1)
-    x_hat = a.reshape(len(x_hat))
-    print(X_distr.T * x_hat, analytic_sol.Inductance())
-    print(Knu)
-    L_hat = x_grid.T @ np.linalg.inv(Knu.toarray()) @ x_grid
-    print(L_hat)
+    x_hat = np.asarray(x_hat).reshape(-1, 1)
+    print(x_grid.shape, x_hat.shape)
+    print('Lana', analytic_sol.Inductance())
+    L_fe = x_grid.T @ x_hat
+    print('L_fe', L_fe, L_fe.shape, x_grid.T @ (a / I))
+
+
 
 
 
     # plot sol: on ground = 0
-    plot_sol(msh, a)
+    plot_properties.plot_sol(msh, a)
 
     ##### Task 7: Calculate magnetic flux density #####
     #
@@ -526,7 +367,7 @@ def main():
 
     # plot b_field:
     # man sieht: ist stärker, wo Reluktanz geringer ist -> in Shell ist B folglich größer
-    plot_bfield(msh, b_field_abs)
+    plot_properties.plot_bfield(msh, b_field_abs)
 
 
     # Compare Results: magnetic energy in [J]

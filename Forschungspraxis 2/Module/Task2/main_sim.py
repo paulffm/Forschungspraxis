@@ -86,16 +86,17 @@ def main():
 
     # Task 3
     l_3 = 2e3
-    u0 = np.array([100, 80 * np.exp(np.pi * 2j / 3), 60 * np.exp(np.pi * 4j / 3)])
+    u0 = np.array([100, 80 * np.exp(np.pi * (-2j / 3)), 60 * np.exp(np.pi * (- 4j / 3))])
     r = 1
     u0, i0, ul, il = solve(a, u0, r)
+    print(u0, i0)
     p_in, p_out = P(u0, i0, ul, il)
     print(f"Power loss {p_in - p_out}W and relative loss {100 * (p_in - p_out) / p_in}%")
 
     # Task 3 - Load power plot
     f = np.logspace(1, 6, 200)
     p_out = [Pout(fi, l_3, R, G, L, C, u0) for fi in f]
-    # plt.plot(f, p_out)
+    print(p_out)
     plt.loglog(f, p_out)
     plt.xlabel('frequency')
     plt.ylabel('Power out')
