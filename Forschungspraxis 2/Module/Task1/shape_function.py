@@ -1,6 +1,6 @@
 import numpy as np
 from dataclasses import dataclass
-from Meshsim import Mesh
+from Mesh import Mesh
 # Definition of shape function N = a+bx+cy
 
 @dataclass

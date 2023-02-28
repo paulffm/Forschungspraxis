@@ -1,6 +1,6 @@
 import gmsh
 from matplotlib import pyplot as plt
-from Meshsim import Mesh
+from Mesh import Mesh
 import numpy as np
 from matplotlib.tri import Triangulation
 

@@ -1,6 +1,6 @@
 import gmsh
 from matplotlib import pyplot as plt
-from Meshsim import Mesh
+from Mesh import Mesh
 from shape_function import ShapeFunction_N
 import analytic_sol
 from scipy.sparse.linalg import spsolve
