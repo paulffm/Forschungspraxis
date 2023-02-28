@@ -73,6 +73,8 @@ def solve(A: np.ndarray, u0: np.ndarray, R: float) -> Tuple[np.ndarray, np.ndarr
     :param R: The load resistance.
     :return: The solution vectors u0, i0, ul, il as a tuple.
     """
+    '''Erklärung: u0 und il gegeben: 
+    '''
     Z = np.zeros([3, 3])
     z = np.array([0, 0, 0])
     M11 = A
