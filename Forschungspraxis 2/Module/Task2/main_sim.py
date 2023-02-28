@@ -4,7 +4,8 @@ from matplotlib import pyplot as plt
 from mTLM import Z, Y, decompose, Z_ch, beta_m, A_m, A, solve, P, Pout, Ak_m
 from matplotlib.pyplot import cm
 from Power_Cable import PowerCable
-show_plot = False
+
+show_plot = True
 
 
 def main():

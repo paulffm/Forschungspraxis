@@ -4,25 +4,6 @@ import numpy.linalg as la
 import scipy.linalg as sla
 from numpy import pi, sqrt
 
-def solve(A: np.ndarray, u0: np.ndarray, R: float) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Solves the mtlm problem.
-    :param A: The transmission matrix.
-    :param u0: The source voltage vector.
-    :param R: The load resistance.
-    :return: The solution vectors u0, i0, ul, il as a tuple.
-    """
-    Z = np.zeros([3, 3])
-    z = np.array([0, 0, 0])
-    M11 = A
-    M12 = -np.eye(6)
-    M21 = sla.block_diag(np.eye(3), Z)
-    M22 = np.block([[Z, Z], [np.eye(3), -np.diag([R, R, R])]])
-    M = np.block([[M11, M12], [M21, M22]])
-    b = np.concatenate([z, z, u0, z])
-
-    x = la.solve(M, b)
-    return x[0:3], x[3:6], x[6:9], x[9:12]
-
 def Z(R: np.ndarray, L: np.ndarray, f: float) -> np.ndarray:
     """The impedance Z."""
     return R + 2j * pi * f * L
@@ -85,19 +66,24 @@ def A(A_m: np.ndarray, Tu: np.ndarray, Ti: np.ndarray) -> np.ndarray:
     T = sla.block_diag(Tu, Ti)
     return T @ A_m @ la.inv(T)
 
-def solve2(A: np.ndarray, u0: np.ndarray, R: float) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def solve(A: np.ndarray, u0: np.ndarray, R: float) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Solves the mtlm problem.
     :param A: The transmission matrix.
     :param u0: The source voltage vector.
     :param R: The load resistance.
     :return: The solution vectors u0, i0, ul, il as a tuple.
     """
-    R = 1
-    i0 = u0 / R
-    b = np.concatenate([u0, i0])
+    Z = np.zeros([3, 3])
+    z = np.array([0, 0, 0])
+    M11 = A
+    M12 = -np.eye(6)
+    M21 = sla.block_diag(np.eye(3), Z)
+    M22 = np.block([[Z, Z], [np.eye(3), -np.diag([R, R, R])]])
+    M = np.block([[M11, M12], [M21, M22]])
+    b = np.concatenate([z, z, u0, z])
 
-    y = A @ b
-    return u0, i0, y[0:3], y[3:6]
+    x = la.solve(M, b)
+    return x[0:3], x[3:6], x[6:9], x[9:12]
 
 def P(u0, i0, ul, il) -> Tuple[float, float]:
     """Calculates the incoming and outgoing power of the cable."""
@@ -117,6 +103,6 @@ def Pout(f: float, l: float, R: np.ndarray, G: np.ndarray, L: np.ndarray, C: np.
     am = A_m(z_char, b, l)
     a = A(am, Tu, Ti)
     r = 1
-    u0, i0, ul, il = solve2(a, u0, r)
+    u0, i0, ul, il = solve(a, u0, r)
     _, p_out = P(u0, i0, ul, il)
     return p_out

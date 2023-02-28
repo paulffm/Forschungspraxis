@@ -48,13 +48,6 @@ class PowerCable:
     model_name: str = "PowerCable_ys"
     depth: float = 1
 
-    '''def __post_init__(self):
-        self.id_wire_u = 1
-        self.id_wire_v = 2
-        self.id_wire_w = 3
-        self.id_insulation = 10
-        self.id_outer_conductor = 11
-        self.id_outer_bound = 12'''
 
     @property
     def ids_wires(self):
@@ -66,7 +59,7 @@ class PowerCable:
         return self.current / (np.pi * self.wire_radius ** 2)
 
     def charge_density(self):
-        """Current density in [A/m^2]"""
+        """Charge density in [C/m^2]"""
         return self.charge / (np.pi * self.wire_radius ** 2)
 
     def create_problem(self, k, type, **kwargs):
@@ -178,11 +171,13 @@ class PowerCable:
         if type == 'elec':
             # Error: AttributeError: 'TriCartesianEdgeShapeFunction' object has no attribute 'elem2regi'
             shape_function = TriCartesianNodalShapeFunction(mesh)
+            #shape_function = TriCartesianEdgeShapeFunction(mesh, self.depth)
             prb = ElectricProblemCartStatic(self.model_name, mesh, shape_function, regions, materials,
                                                  boundary_conditions_elec, excitations)
         else:
             # Defining the shape function for solving the FE problem
             shape_function = TriCartesianEdgeShapeFunction(mesh, self.depth)
+
             # Setting up the FE problem
             prb = MagneticProblemCartStatic(self.model_name, shape_function, mesh, regions, materials,
                                         boundary_conditions_mag, excitations)
@@ -190,3 +185,8 @@ class PowerCable:
 
 
         return prb, shape_function
+
+
+    '''Außerdem habe ich noch eine Frage zur Aufgabe 2 in Task 2c):
+Zuvor habe ich in der b) U und I über U = Tu umund I = Ti im bestimmt und so dann u1 = Tu[:, 0] u2=Tu[:, 1] u3=[:, 2] 
+'''
