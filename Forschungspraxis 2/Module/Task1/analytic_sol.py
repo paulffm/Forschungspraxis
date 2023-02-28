@@ -92,5 +92,4 @@ def W_magn():
 
 def Inductance():
     #[H]   : inductance (analytical)
-    W_magn_analytic = W_magn()
-    return 2 * W_magn_analytic / I ** 2
+    return 2 * W_magn() / I ** 2

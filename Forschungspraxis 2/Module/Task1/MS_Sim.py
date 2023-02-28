@@ -279,7 +279,7 @@ def main():
 
     print('Analytical L', analytic_sol.Inductance())
     print('FE L 2 Calculations', x_grid.T @ x_hat)
-    print('FE L 1 Calculation', x_grid.T @ (a / I))
+    print('FE L 1 Calculation', x_grid.T @ (a / I), x_grid.T @ np.linalg.inv(Knu.toarray()) @ x_grid)
 
     # plot sol: on ground = 0
     plot_properties.plot_sol(msh, a)

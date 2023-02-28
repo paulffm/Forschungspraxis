@@ -2,6 +2,8 @@ import gmsh
 import numpy as np
 from matplotlib import pyplot as plt
 import analytic_sol
+from scipy import constants as const
+show_plot = True
 
 
 
@@ -41,9 +43,9 @@ def main():
     model_name = "wire"  # str : model name
     I = 16  # [A]   : applied current
     J_0 = I / (np.pi * r_1 ** 2)  # [A/m] : current density in the wire
-    mu_0 = 4 * np.pi * 1e-7  # [H/m] : permeability of vacuum (and inside of wire)
+    mu_0 = const.mu_0 #4 * np.pi * 1e-7  # [H/m] : permeability of vacuum (and inside of wire)
     mu_shell = 5 * mu_0
-    eps_0 = 8.8541878128 * 1e-12
+    eps_0 = const.epsilon_0 #8.8541878128 * 1e-12
 
     ##### Task 10: TLM #####
     sigma = 57.7e6
@@ -68,10 +70,14 @@ def main():
     beta = []
     Z_char = []
     c_0 = 1 / np.sqrt(mu_0 * eps_0)
-    v_phase = c_0 #1 / (np.sqrt(L * C))
-    print(v_phase, c_0)
+    v_phase = c_0
+    v_2 = 1 / (np.sqrt(L * C))
+    print(v_phase, c_0, v_2)
+    print(1 / np.sqrt(2  / (4 * np.pi) * (mu_0 / 4 + mu_0 * np.log(r_2 / r_1)) * C))
+
 
     wave_len = []
+    wave_len2 = []
     #f = np.arange(1, 10e3 + 1, 1)
     f = np.logspace(0, 5, 100)
 
@@ -87,41 +93,57 @@ def main():
         beta.append(np.sqrt(Z_i * Y_i))
         Z_char.append(np.sqrt(Z_i / Y_i))
         wave_len.append(v_phase / f[i])
+        wave_len2.append(v_2 / f[i])
 
     Z_abs = np.abs(Z_char)
     Z_ang = np.angle(Z_char, deg=True)
 
+    if show_plot:
+        plt.xlabel('frequency')
+        plt.ylabel('abs(Z)')
+        plt.title('Bode plot of abs(Z_char) in loglog')
+        plt.loglog(f, Z_abs)
+        plt.show()
 
-    plt.xlabel('frequency')
-    plt.ylabel('abs(Z)')
-    plt.title('Bode plot of abs(Z_char) in loglog')
-    plt.loglog(f, Z_abs)
-    plt.show()
 
+        plt.xlabel('frequency')
+        plt.ylabel('angle(Z) in Degrees')
+        plt.title('Plot of angle(Z_char) in semilog')
+        plt.plot(f, Z_ang)
+        plt.xscale('log')
+        plt.show()
 
-    plt.xlabel('frequency')
-    plt.ylabel('angle(Z) in Degrees')
-    plt.title('Plot of angle(Z_char) in semilog')
-    plt.plot(f, Z_ang)
-    plt.xscale('log')
-    plt.show()
+        '''plt.xlabel('frequency')
+        plt.ylabel('wave length')
+        plt.title('Plot of wave length in semilog')
+        plt.plot(f, wave_len)
+        plt.xscale('log')
+        plt.show()'''
 
-    plt.xlabel('frequency')
-    plt.ylabel('wave length')
-    plt.title('Plot of wave length in semilog')
-    plt.plot(f, wave_len)
-    plt.xscale('log')
-    plt.show()
-    print(wave_len)
+        plt.xlabel('frequency')
+        plt.ylabel('wave length2')
+        plt.title('Plot of wave length in semilog')
+        plt.plot(f, wave_len2)
+        plt.xscale('log')
+        plt.show()
 
-    plt.xlabel('frequency')
-    plt.ylabel('v_phase')
-    plt.title('plot of v_phase in semilog')
-    plt.plot(f, wave_len * f)
-    plt.xscale('log')
-    plt.xlabel('frequency')
-    plt.ylabel('v_phase')
-    plt.show()
+        plt.xlabel('frequency')
+        plt.ylabel('v_phase')
+        plt.title('plot of v_phase in semilog')
+        plt.plot(f, wave_len * f)
+        plt.xscale('log')
+        plt.xlabel('frequency')
+        plt.ylabel('v_phase')
+        plt.show()
+
+        '''plt.xlabel('frequency')
+        plt.ylabel('v_phase2')
+        plt.title('plot of v_phase in semilog')
+        plt.plot(f, wave_len2 * f)
+        plt.xscale('log')
+        plt.xlabel('frequency')
+        plt.ylabel('v_phase')
+        plt.show()'''
 
     # propagation and admittance matrix for f_3 = 1kHz
     f_3 = 1e3
