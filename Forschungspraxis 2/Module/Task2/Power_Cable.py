@@ -11,22 +11,23 @@ from dataclasses import dataclass
 from scipy.constants import mu_0, epsilon_0
 import gmsh
 from pyrit.geometry import Geometry
-from pyrit.bdrycond import BCDirichlet, BdryCond
+from pyrit.bdrycond import BCDirichlet, BdryCond, BCFloating
 from pyrit.material import Mat, Materials, Reluctivity
 from pyrit.material import Materials, Mat, Permittivity, Conductivity, Reluctivity
-from pyrit.shapefunction import TriCartesianEdgeShapeFunction
-from pyrit.excitation import Excitations, CurrentDensity
+from pyrit.shapefunction import TriCartesianEdgeShapeFunction, TriCartesianNodalShapeFunction
+from pyrit.excitation import Excitations, CurrentDensity, ChargeDensity
 from pyrit.problem import MagneticProblemCartStatic, ElectricProblemCartStatic
 from pyrit.toolbox.PostprocessToolbox import plot_field_on_line, get_field_on_line
 show_plot = True
-
+'''L [[2.11889983e-07 6.48576562e-08 6.48568935e-08]
+ [6.48576562e-08 2.11890109e-07 6.48566612e-08]
+ [6.48568935e-08 6.48566612e-08 2.11884862e-07]]'''
 @dataclass
 class PowerCable:
 
     '''def __init__(self, k):
         self.k = k'''
 
-    k = 0
     # given
     wire_radius: float = 1.1e-3
     radius_wires_center_points: float = 1.5e-3
@@ -35,19 +36,25 @@ class PowerCable:
     conductivity_copper: float = 57.7e6
     conductivity_surrounding: float = 0
     relative_permittivity_surrounding: float = 10
+    id_wire_u = 1
+    id_wire_v = 2
+    id_wire_w = 3
+    id_insulation = 10
+    id_outer_conductor = 11
+    id_outer_bound = 12
 
-    # Strom?
-    current: float = 16
+    current: float = 1
+    charge: float = 1
     model_name: str = "PowerCable_ys"
     depth: float = 1
 
-    def __post_init__(self):
+    '''def __post_init__(self):
         self.id_wire_u = 1
         self.id_wire_v = 2
         self.id_wire_w = 3
         self.id_insulation = 10
         self.id_outer_conductor = 11
-        self.id_outer_bound = 12
+        self.id_outer_bound = 12'''
 
     @property
     def ids_wires(self):
@@ -58,10 +65,14 @@ class PowerCable:
         """Current density in [A/m^2]"""
         return self.current / (np.pi * self.wire_radius ** 2)
 
-    def create_problem(self, **kwargs):
+    def charge_density(self):
+        """Current density in [A/m^2]"""
+        return self.charge / (np.pi * self.wire_radius ** 2)
+
+    def create_problem(self, k, type, **kwargs):
         geo = Geometry("Power cable", **kwargs)
 
-        # fragen: Reluktanz?
+
         materials = Materials(
             mat_wire_u := Mat("Wire u", Permittivity(epsilon_0),  Reluctivity(1 / mu_0),
                               Conductivity(self.conductivity_copper)),
@@ -74,14 +85,6 @@ class PowerCable:
             mat_insulation := Mat("Insulation", Permittivity(self.relative_permittivity_surrounding * epsilon_0),
                                   Reluctivity(1 / mu_0),
                                   Conductivity(self.conductivity_surrounding)))
-
-        # creating boundary condition
-        boundary_conditions = BdryCond(bc := BCDirichlet(0))
-
-        # Creating the excitation: das hier richtig?:
-        # setze eine anregung und gebe die jedem wire? in machine slot anders?
-
-        excitations = Excitations(exci := CurrentDensity(self.current_density))
 
         # given
         pg_wire_u = geo.create_physical_group(self.id_wire_u, 2, "Wire u")
@@ -99,19 +102,42 @@ class PowerCable:
         geo.add_material_to_physical_group(mat_outer_cond, pg_outer_conductor)
 
         # add excitation
-        if self.k == 1:
-            geo.add_excitation_to_physical_group(exci, pg_wire_u)
-        elif self.k == 2:
-            geo.add_excitation_to_physical_group(exci, pg_wire_v)
-        elif self.k == 3:
-            geo.add_excitation_to_physical_group(exci, pg_wire_w)
+        if type == 'elec':
+            excitations = Excitations(exci := ChargeDensity(self.charge_density))
+            if k == 1:
+                geo.add_excitation_to_physical_group(exci, pg_wire_u)
+            elif k == 2:
+                geo.add_excitation_to_physical_group(exci, pg_wire_v)
+            elif k == 3:
+                geo.add_excitation_to_physical_group(exci, pg_wire_w)
+            else:
+                geo.add_excitation_to_physical_group(exci, pg_wire_u)
+                geo.add_excitation_to_physical_group(exci, pg_wire_v)
+                geo.add_excitation_to_physical_group(exci, pg_wire_w)
+
         else:
-            geo.add_excitation_to_physical_group(exci, pg_wire_u)
-            geo.add_excitation_to_physical_group(exci, pg_wire_v)
-            geo.add_excitation_to_physical_group(exci, pg_wire_w)
+            excitations = Excitations(exci := CurrentDensity(self.current_density))
+            if k == 1:
+                geo.add_excitation_to_physical_group(exci, pg_wire_u)
+            elif k == 2:
+                geo.add_excitation_to_physical_group(exci, pg_wire_v)
+            elif k == 3:
+                geo.add_excitation_to_physical_group(exci, pg_wire_w)
+            else:
+                geo.add_excitation_to_physical_group(exci, pg_wire_u)
+                geo.add_excitation_to_physical_group(exci, pg_wire_v)
+                geo.add_excitation_to_physical_group(exci, pg_wire_w)
+
 
         # set bc
+        # creating boundary condition
+        if type =='elec':
+            boundary_conditions_elec = BdryCond(bc := BCFloating())
+        else:
+            boundary_conditions_mag = BdryCond(bc := BCDirichlet(0))
+
         geo.add_boundary_condition_to_physical_group(bc, pg_outer_bound)
+
 
         # given
         # %% Building model in gmsh and creating the mesh
@@ -148,130 +174,19 @@ class PowerCable:
             mesh = geo.get_mesh(2)
             regions = geo.get_regions()
 
-        # Defining the shape function for solving the FE problem
-        shape_function = TriCartesianEdgeShapeFunction(mesh, self.depth)
 
-        # Setting up the FE problem
-        prb_magn = MagneticProblemCartStatic(self.model_name, shape_function, mesh, regions, materials,
-                                        boundary_conditions, excitations)
-
-        # Error: AttributeError: 'TriCartesianEdgeShapeFunction' object has no attribute 'elem2regi'
-        '''prb_elec = ElectricProblemCartStatic(self.model_name, shape_function, mesh, regions, materials,
-                                             boundary_conditions, excitations)'''
-
-
-        return prb_magn, shape_function
-
-
-def main():
-
-    # Fragen:
-    # Reluktanz?
-    # L: kann ja nicht richtig sein: brauche mehrere: Mehrmals simulieren, aber wie?
-    ''' Strom nur in einem Wire auf current setzen, anderen 0, dann 3 mal rechnen?
-    auch dann habe ich nur 3 Werte: Wie Gegeninduktivität?
-    '''
-    # für Ti, Tu brauche ich ja L,C
-
-    # keine Möglichkeit von L auf C?
-    # C: Genauso nur für elektrostatik?: W= 0.5 * C U^2? nach C umstellen, aber wie U?
-    #
-    # Vergleich mit machine slot: Durchgehen, ob richtig gemacht in Power_Cable?
-    power_cable = PowerCable()
-    problem, shape_function = power_cable.create_problem(mesh_size_factor=0.2, show_gui=False)
-    load = shape_function.load_vector(problem.regions, problem.excitations)
-    X = load / power_cable.current
-
-    # ValueError: Matrix A is singular, because it contains empty row(s)
-    solution = problem.solve()
-    mesh = problem.mesh
-    curlcurl_matrix = solution.curlcurl_matrix
-
-
-    print('Energy Density', solution.energy_density)
-    print('Energy', solution.energy)
-    print('Inductivity', 2 * solution.energy / power_cable.current ** 2)
-    print('Induct 2', (X.T @ solution.vector_potential / power_cable.current))
-    if show_plot:
-        solution.plot_energy_density()
-        solution.plot_vector_potential()
-        solution.plot_current_density()
-        plt.show()
-
-
-    # Compute the magnetic flux density magnitude
-    b_abs = np.linalg.norm(solution.b_field, axis=1)
-
-    # Plots the magnetic flux density, style options are 'arrows', 'abs', 'stream'.
-    if show_plot:
-        solution.plot_equilines()
-        solution.plot_b_field('abs')
-        solution.plot_b_field('arrows')
-        solution.plot_b_field('stream')
-        plt.show()
-
-    # Plot a field a long an arbitrary line, with/without smoothing option
-    start_point = [0, 0]  # x,y
-    end_point = [power_cable.outer_conductor_outer_radius, 0.]  # x,y
-
-    fig, ax = plot_field_on_line(mesh, start_point, end_point, b_abs, lower_bound=0, upper_bound=end_point[0],
-                                 smoothing=True, regions=problem.regions, marker='o', label='With smoothing')
-    fig, ax = plot_field_on_line(mesh, start_point, end_point, b_abs, lower_bound=0, upper_bound=end_point[0],
-                                 smoothing=False, regions=problem.regions, marker='o', fig=fig, ax=ax,
-                                 label='Without smoothing')
-    ax.legend()
-    ax.set_title('Absolute magnetic flux density over the radius')
-    ax.set_xlabel('Radius in m')
-    ax.set_ylabel(r'$\left|\vec{B}\right|$')
-    plt.show()
-
-    # Compare analytic and numerical solution
-    radius = np.linspace(1e-5, power_cable.outer_conductor_outer_radius, 200)
-    _, ax = plot_field_on_line(mesh, start_point, end_point, solution.vector_potential_field_values, lower_bound=0,
-                               upper_bound=end_point[0], smoothing=True, regions=problem.regions, label='Numeric')
-    ax.legend()
-    ax.set_title("Vector potential")
-    plt.show()
-
-    # einzeln die Wires auf Strom setzen?
-    '''k = [1, 2, 3]
-    L = []
-    for i in k:
-    # Vergleich mit machine slot: Durchgehen, ob richtig gemacht in Power_Cable?
-        power_cable = PowerCable(i)
-        problem = power_cable.create_problem(mesh_size_factor=0.2, show_gui=False)
-
-        # ValueError: Matrix A is singular, because it contains empty row(s) -> without Reluktanz
-        solution = problem.solve()
-        mesh = problem.mesh
-        curlcurl_matrix = solution.curlcurl_matrix
-
-
-        print('Energy Density', solution.energy_density)
-        print('Energy', solution.energy)
-        L_i = 2 * solution.energy / power_cable.current ** 2
-        print('Inductivity', L_i)
-        L.append(L_i)
-
-        if show_plot:
-            solution.plot_energy_density()
-            plt.show()
-
-
-        # Compute the magnetic flux density magnitude
-        b_abs = np.linalg.norm(solution.b_field, axis=1)
-
-        # Plots the magnetic flux density, style options are 'arrows', 'abs', 'stream'.
-        if show_plot:
-            solution.plot_b_field('abs')
-            solution.plot_b_field('arrows')
-            solution.plot_b_field('stream')
-            solution.plot_equilines()
-            plt.show()'''
+        if type == 'elec':
+            # Error: AttributeError: 'TriCartesianEdgeShapeFunction' object has no attribute 'elem2regi'
+            shape_function = TriCartesianNodalShapeFunction(mesh)
+            prb = ElectricProblemCartStatic(self.model_name, mesh, shape_function, regions, materials,
+                                                 boundary_conditions_elec, excitations)
+        else:
+            # Defining the shape function for solving the FE problem
+            shape_function = TriCartesianEdgeShapeFunction(mesh, self.depth)
+            # Setting up the FE problem
+            prb = MagneticProblemCartStatic(self.model_name, shape_function, mesh, regions, materials,
+                                        boundary_conditions_mag, excitations)
 
 
 
-
-
-if __name__ == '__main__':
-    main()
+        return prb, shape_function

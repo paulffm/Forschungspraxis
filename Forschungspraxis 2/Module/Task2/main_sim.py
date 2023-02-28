@@ -3,19 +3,11 @@ import numpy.linalg as la
 from matplotlib import pyplot as plt
 from mTLM import Z, Y, decompose, Z_ch, beta_m, A_m, A, solve, P, Pout, Ak_m
 from matplotlib.pyplot import cm
+from Power_Cable import PowerCable
+show_plot = False
 
 
 def main():
-
-
-
-    ## Task 1:
-    r_w = 1.1e-3
-    sigma = 57.7e6
-
-    R_1 = np.eye(3) * (1 / (sigma * np.pi * r_w ** 2))
-    print(R_1)
-
 
     f = 1e3
     l = 1
@@ -66,22 +58,25 @@ def main():
     print(' attenuation const:', np.real(b))
     print('')
 
+    if show_plot:
+        plt.figure()
+        color = iter(cm.rainbow(np.linspace(0, 1, 10)))
+        for i in range(Tu.shape[1]):
+            # um im: (1 0 0) (0 1 0) (0 0 1)
+            u_i = Tu[:, i]
+            i_i = Ti[:, i]
+            for j in range(u_i.shape[0]):
+                c = next(color)
+                plt.polar([0, np.angle(u_i[j])], [0, np.abs(u_i[j])], marker='o', label=f'I{j+1}, U{j+1} Mode {i+1}', c=c)
+                plt.polar([0, np.angle(i_i[j])], [0, np.abs(i_i[j])], marker='x', c=c)
+                #color = next(color)
 
-    plt.figure()
-    color = iter(cm.rainbow(np.linspace(0, 1, 10)))
-    for i in range(Tu.shape[1]):
-        # um im: (1 0 0) (0 1 0) (0 0 1)
-        u_i = Tu[:, i]
-        i_i = Ti[:, i]
-        for j in range(u_i.shape[0]):
-            c = next(color)
-            plt.polar([0, np.angle(u_i[j])], [0, np.abs(u_i[j])], marker='o', label=f'I{j+1}, U{j+1} Mode {i+1}', c=c)
-            plt.polar([0, np.angle(i_i[j])], [0, np.abs(i_i[j])], marker='x', c=c)
-            #color = next(color)
+        plt.legend(loc='lower left').set_draggable(True)
+        plt.title(f'Polar Plot of U and I for the 3 Modes')
+        plt.show()
 
-    plt.legend(loc='lower left').set_draggable(True)
-    plt.title(f'Polar Plot of U and I for the 3 Modes')
-    plt.show()
+    print('Ti', Ti)
+    print('Tu', Tu)
 
 
     # Task 3
@@ -96,11 +91,11 @@ def main():
     # Task 3 - Load power plot
     f = np.logspace(1, 6, 200)
     p_out = [Pout(fi, l_3, R, G, L, C, u0) for fi in f]
-    print(p_out)
-    plt.loglog(f, p_out)
-    plt.xlabel('frequency')
-    plt.ylabel('Power out')
-    plt.show()
+    if show_plot:
+        plt.loglog(f, p_out)
+        plt.xlabel('frequency')
+        plt.ylabel('Power out')
+        plt.show()
 
 
 

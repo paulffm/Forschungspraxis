@@ -160,6 +160,7 @@ def simulate_mqs():
     vals[4] = 1
     excis_left = [CurrentDensity(val) for val in vals]  # List of excitations for the left side in the slot
     excis_right = [CurrentDensity(val) for val in vals]  # List of excitations for the right side in the slot
+    print(excis_left)
 
     problem = create_machine_slot_problem(excis_left, excis_right, show_gui=True, mesh_size_factor=0.03)
 

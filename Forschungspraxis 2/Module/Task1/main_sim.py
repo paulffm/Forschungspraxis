@@ -8,68 +8,8 @@ import numpy as np
 import scipy.sparse.linalg as las
 from scipy.sparse import csr_matrix, csr_array, spmatrix
 import plot_properties
+from plot_properties import entity_in_physical_group
 
-
-
-def X(physical_groups, shape_function, mesh: Mesh) -> spmatrix:
-    """The current distribution matrix X of size (N,1)."""
-    x = np.zeros(mesh.num_elements * 3)
-    rows = np.zeros(mesh.num_elements * 3)
-    cols = np.zeros(mesh.num_elements * 3)  # TODO: Update cols if 2nd conductor is present.
-
-    idx = entity_in_physical_group(physical_groups, mesh.elem_to_node, 'WIRE')  # The indices of wire elements with current I
-    S: float = np.sum(shape_function.element_area[idx]) * 1  # The surface area of the wire
-
-    for i, nodes in enumerate(mesh.elements):
-        rows[i * 3:(i + 1) * 3] = nodes
-        #x[i * 3:(i + 1) * 3] = shape_function.element_area[i] / (3*S) * np.ones(3) * idx[i]
-        x[i * 3:(i + 1) * 3] = X_e(i, S, shape_function) * idx[i]
-
-    return csr_matrix((x, (rows, cols)), shape=(mesh.num_node, 1))
-
-
-def X_e(elem: int, S: float, shape_function) -> np.ndarray:
-    """The local 3x1 current distribution matrix X.
-    :param elem: The element for the local matrix.
-    :param S: The surface area of the entire region.
-    """
-    return shape_function.element_area[elem] / (3*S) * np.ones(3)
-
-
-def j_grid(I, physical_groups, shape_function, mesh: Mesh) -> spmatrix:
-    """The grid-current right hand side vector of size (N,1)."""
-    return X(physical_groups, shape_function, mesh) * I
-
-def entity_in_physical_group(physical_group_data: dict, entity2node: np.ndarray, identifier):
-    """
-    Computes the indices of all entities that are in the physical group
-    specified by the identifier
-
-    Parameters
-    ----------
-    physical_group_data : dict
-        dict with physical groups. Key is the ID of the group and value is a tuple with (dimension, name, indices of all nodes)
-    entity2node : np.ndarray
-        (K,N) array with K entities and N nodes per entity
-    identifier : int or str
-        Identifier of the physical group. The ID or the name of the group are accepted
-
-    Returns
-    -------
-    entity_in_physical_group : np.ndarray
-        (M,) array. With M being the number of entities in the physical group
-    """
-    if type(identifier) is str:
-        for p in physical_group_data.keys():
-            if physical_group_data[p][1] == identifier:
-                identifier = p
-
-    out = -1 * np.ones(entity2node.shape[0], dtype=int)
-    for k in range(entity2node.shape[0]):
-        if np.isin(entity2node[k, :], physical_group_data[identifier][2]).all():
-            out[k] = k
-
-    return out[out != -1]
 
 def Knu_for_elem(k, shape_function, reluctivity_in_elements):
     '''
@@ -272,8 +212,8 @@ def main():
     # Assembly of grid current vector: (num_nodes, 1) array but sparse, with current on each node
     j_grid = csr_matrix((values, (np.arange(msh.num_node), np.zeros(msh.num_node))), shape=(msh.num_node, 1))
     x_grid = csr_matrix((x_values, (np.arange(msh.num_node), np.zeros(msh.num_node))), shape=(msh.num_node, 1))
-    print('j', j_grid, j_grid.shape)
-    print('x', x_grid, x_grid * I == j_grid)
+    #print('j', j_grid, j_grid.shape)
+    #print('x', x_grid, x_grid * I == j_grid)
 
     # plot current density in elements
     plot_properties.plot_current(msh, j_in_elems)
@@ -329,24 +269,17 @@ def main():
     a[idx_bc] = value_bc
     a = a.reshape(len(a))  # (101) for every node
 
-    # example calculation L
-
-    # wie L?
+    # L: Calculation
     x_grid_shrink = x_grid[idx_dof]
     x_hat = np.zeros((msh.num_node, 1))
     x_hat_shrink = spsolve(Knu_red, x_grid_shrink)
     x_hat[idx_dof] = x_hat_shrink.reshape(-1, 1)
     x_hat[idx_bc] = value_bc.reshape(-1, 1)
     x_hat = np.asarray(x_hat).reshape(-1, 1)
-    print(x_grid.shape, x_hat.shape)
 
-    L_fe = x_grid.T @ x_hat
     print('Analytical L', analytic_sol.Inductance())
-    print('FE L', L_fe, L_fe.shape, x_grid.T @ (a / I))
-
-
-
-
+    print('FE L 2 Calculations', x_grid.T @ x_hat)
+    print('FE L 1 Calculation', x_grid.T @ (a / I))
 
     # plot sol: on ground = 0
     plot_properties.plot_sol(msh, a)
@@ -366,7 +299,6 @@ def main():
     # plot b_field:
     # man sieht: ist stärker, wo Reluktanz geringer ist -> in Shell ist B folglich größer
     plot_properties.plot_bfield(msh, b_field_abs)
-
 
     # Compare Results: magnetic energy in [J]
     W_magn_fe = 1 / 2 * a @ Knu @ a
