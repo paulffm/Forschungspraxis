@@ -1,21 +1,18 @@
-
 import numpy as np
 import matplotlib.pyplot as plt
 from dataclasses import dataclass
 from scipy.constants import mu_0
 import gmsh
-
 from pyrit.geometry import Geometry
 from pyrit.bdrycond import BCDirichlet, BdryCond
 from pyrit.material import Mat, Materials, Reluctivity
 from pyrit.shapefunction import TriCartesianEdgeShapeFunction
 from pyrit.excitation import Excitations, CurrentDensity
 from pyrit.problem import MagneticProblemCartStatic
-
 from pyrit.toolbox.PostprocessToolbox import plot_field_on_line, get_field_on_line
 
 # Variable to show or suppress the plots.
-show_plot = True
+show_plot = False
 
 
 @dataclass
@@ -327,6 +324,7 @@ element_sizes = np.empty_like(refinements_steps, dtype=float)
 - Compute the energy
 - Determine the maximum element size
 """
+print('Refinement')
 for k, refinement in enumerate(refinements_steps):
     problem = wire_problem.create_problem(mesh_size=1, refinement_steps=refinement)
     solution = problem.solve()
@@ -336,11 +334,16 @@ for k, refinement in enumerate(refinements_steps):
 
 # Relative error in the energy and convergence order
 rel_error = np.abs((energies - wire_problem.analytic_energy) / wire_problem.analytic_energy)
+print(f'rel_errors: {rel_error * 100} %')
+print(f'max element sizes: {element_sizes}')
 convergence_order = np.polyfit(np.log(element_sizes), np.log(rel_error), 1)[0]
+conv_order = (np.log(rel_error[0]) - np.log(rel_error[-1])) / (np.log(element_sizes[0]) - np.log(element_sizes[-1]))
+print(f'Convergence order: {conv_order:.2f}')
 
-_, ax = plt.subplots()
-ax.loglog(element_sizes, rel_error, label="Error")
-ax.legend()
-ax.set_title(f"Relative error. Convergence of order {convergence_order:.2f}")
+plt.figure()
+plt.loglog(element_sizes, rel_error, label="Error")
+plt.xlabel('element size')
+plt.ylabel('relative error')
+plt.title(f"Relative error. Convergence of order {conv_order:.2f}")
 plt.show()
 

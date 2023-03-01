@@ -62,7 +62,7 @@ class PowerCable:
         """Charge density in [C/m^2]"""
         return self.charge / (np.pi * self.wire_radius ** 2)
 
-    def create_problem(self, k, type, **kwargs):
+    def create_problem(self, k, type, exci_type=1, **kwargs):
         geo = Geometry("Power cable", **kwargs)
 
 
@@ -109,17 +109,24 @@ class PowerCable:
                 geo.add_excitation_to_physical_group(exci, pg_wire_w)
 
         else:
-            excitations = Excitations(exci := CurrentDensity(self.current_density))
-            if k == 1:
-                geo.add_excitation_to_physical_group(exci, pg_wire_u)
-            elif k == 2:
-                geo.add_excitation_to_physical_group(exci, pg_wire_v)
-            elif k == 3:
-                geo.add_excitation_to_physical_group(exci, pg_wire_w)
+            if exci_type == 3:
+                vals = np.zeros(3)  # Value of the current density of the conductors
+                vals[4] = 1
+                excis = [CurrentDensity(val) for val in vals]
+
             else:
-                geo.add_excitation_to_physical_group(exci, pg_wire_u)
-                geo.add_excitation_to_physical_group(exci, pg_wire_v)
-                geo.add_excitation_to_physical_group(exci, pg_wire_w)
+                excitations = Excitations(exci := CurrentDensity(self.current_density))
+                if k == 1:
+                    geo.add_excitation_to_physical_group(exci, pg_wire_u)
+                elif k == 2:
+                    geo.add_excitation_to_physical_group(exci, pg_wire_v)
+                elif k == 3:
+                    geo.add_excitation_to_physical_group(exci, pg_wire_w)
+                else:
+                    geo.add_excitation_to_physical_group(exci, pg_wire_u)
+                    geo.add_excitation_to_physical_group(exci, pg_wire_v)
+                    geo.add_excitation_to_physical_group(exci, pg_wire_w)
+
 
 
         # set bc
