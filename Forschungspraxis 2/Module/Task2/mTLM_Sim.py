@@ -21,6 +21,7 @@ def main():
     Y_y = Y(G, C, f)
 
     Zm, Ym, Tu, Ti = decompose(Z_z, Y_y)
+    np.savetxt('Ti.csv', Ti)
 
     k = [1, 2, 3]
     X_mag = []
@@ -28,9 +29,11 @@ def main():
     a_mag = []
     current_list = []
 
-    for i in k:
-        power_cable = PowerCable()
-        problem, shape_function = power_cable.create_problem(mesh_size_factor=0.2, show_gui=False, k=i, type='magn')
+    for i, k_i in enumerate(k):
+        power_cable = PowerCable(current=Ti[:, i])
+        #power_cable = PowerCable(current=1)
+        problem, shape_function = power_cable.create_problem(mesh_size_factor=0.2, show_gui=False, k=k_i,
+                                                             type='magn', exci_type=3)
         load = shape_function.load_vector(problem.regions, problem.excitations)
         X = load / power_cable.current
 

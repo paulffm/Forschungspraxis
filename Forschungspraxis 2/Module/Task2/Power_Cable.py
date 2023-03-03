@@ -22,6 +22,11 @@ show_plot = True
 '''L [[2.11889983e-07 6.48576562e-08 6.48568935e-08]
  [6.48576562e-08 2.11890109e-07 6.48566612e-08]
  [6.48568935e-08 6.48566612e-08 2.11884862e-07]]'''
+
+'''Capacity [[ 1.07953164e-10 -5.39830665e-11 -5.39847408e-11]
+ [-5.39828145e-11  1.07953027e-10 -5.39841696e-11]
+ [-5.39815573e-11 -5.39811681e-11  1.07957703e-10]]'''
+
 @dataclass
 class PowerCable:
 
@@ -42,11 +47,11 @@ class PowerCable:
     id_insulation = 10
     id_outer_conductor = 11
     id_outer_bound = 12
-
     current: float = 1
     charge: float = 1
     model_name: str = "PowerCable_ys"
     depth: float = 1
+
 
 
     @property
@@ -58,6 +63,7 @@ class PowerCable:
         """Current density in [A/m^2]"""
         return self.current / (np.pi * self.wire_radius ** 2)
 
+    @property
     def charge_density(self):
         """Charge density in [C/m^2]"""
         return self.charge / (np.pi * self.wire_radius ** 2)
@@ -96,6 +102,7 @@ class PowerCable:
 
         # add excitation
         if type == 'elec':
+
             excitations = Excitations(exci := ChargeDensity(self.charge_density))
             if k == 1:
                 geo.add_excitation_to_physical_group(exci, pg_wire_u)
@@ -110,9 +117,13 @@ class PowerCable:
 
         else:
             if exci_type == 3:
-                vals = np.zeros(3)  # Value of the current density of the conductors
-                vals[4] = 1
+                vals = (self.current_density).tolist()
+                print('vals', vals)
                 excis = [CurrentDensity(val) for val in vals]
+                excitations = Excitations(*(excis))
+                geo.add_excitation_to_physical_group(excis[0], pg_wire_u)
+                geo.add_excitation_to_physical_group(excis[1], pg_wire_v)
+                geo.add_excitation_to_physical_group(excis[2], pg_wire_w)
 
             else:
                 excitations = Excitations(exci := CurrentDensity(self.current_density))

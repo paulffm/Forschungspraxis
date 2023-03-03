@@ -58,7 +58,7 @@ def main():
     print(' phase const:   ', np.imag(b))
     print(' attenuation const:', np.real(b))
     print('')
-    print('Ti', Ti[:, 0], Ti[:, 1], Ti[:, 2])
+    print('Ti', Ti[:, 0].shape, Ti[:, 1], Ti[:, 2], Ti.shape)
 
     if show_plot:
         plt.figure()

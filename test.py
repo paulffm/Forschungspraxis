@@ -1,8 +1,10 @@
 import numpy as np
 import numpy.linalg as la
 import scipy.linalg as sla
+import pandas as pd
 
-
+def z2polar(z):
+    return ( abs(z), np.angle(z) )
 
 u0 = np.array([100, 80 * np.exp(np.pi * (-2j / 3)), 60 * np.exp(np.pi * (- 4j / 3))])
 
@@ -29,3 +31,12 @@ print('M', M, M.shape)
 # 12, vektor
 b = np.concatenate([z, z, u0, z])
 print('b', b, b.shape)
+
+Ti = np.array([[3+4*1j, 1+2*1j], [5+6*1j, 8+0 * 1j]])
+print(Ti, Ti.shape)
+
+print(z2polar(Ti[:, 0]))
+print(z2polar(Ti))
+print(z2polar(Ti[:, 0]))
+
+
